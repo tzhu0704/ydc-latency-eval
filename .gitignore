@@ -1,0 +1,16 @@
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+
+# Local test data and measured results may contain queries or infrastructure details
+results/
+reports/
+query_sets/
+sea-natural-40-batch4.json
+docs/byteplus-latency-test-plan.md
+
+# Local diagnostic scratch scripts and Python artifacts
+.tmp_*
+__pycache__/
+*.py[cod]
