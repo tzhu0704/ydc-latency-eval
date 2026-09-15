@@ -1,4 +1,4 @@
-# BytePlus Endpoint Latency Test
+# API Endpoint Latency Test
 
 **English** | [简体中文](#简体中文)
 

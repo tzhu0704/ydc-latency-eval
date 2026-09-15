@@ -8,7 +8,7 @@ results/
 reports/
 query_sets/
 sea-natural-40-batch4.json
-docs/byteplus-latency-test-plan.md
+docs/
 
 # Local diagnostic scratch scripts and Python artifacts
 .tmp_*

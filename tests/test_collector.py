@@ -91,7 +91,7 @@ class CollectorCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "authenticated.jsonl"
             environment = os.environ.copy()
-            environment.pop("BYTEPLUS_TEST_KEY", None)
+            environment.pop("TEST_API_KEY", None)
 
             completed = subprocess.run(
                 [
@@ -102,7 +102,7 @@ class CollectorCliTests(unittest.TestCase):
                     "1",
                     "--authenticated",
                     "--api-key-env",
-                    "BYTEPLUS_TEST_KEY",
+                    "TEST_API_KEY",
                     "--output",
                     str(output),
                 ],
@@ -113,7 +113,7 @@ class CollectorCliTests(unittest.TestCase):
             )
 
             self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("BYTEPLUS_TEST_KEY is not set", completed.stderr)
+            self.assertIn("TEST_API_KEY is not set", completed.stderr)
             self.assertFalse(output.exists())
 
     def test_env_check_accepts_dotenv_values_that_are_not_shell_syntax(self):

@@ -4,7 +4,7 @@ import json, os, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-root = Path('/opt/github/byteplus-latency-test')
+root = Path(__file__).resolve().parent
 output = root / 'results/20260817-jakarta-all-international-search.jsonl'
 queries = json.loads((root / 'query_sets/sea-natural-40-batch5.json').read_text())
 if output.exists() or len({q['id'] for q in queries}) != len(queries):
