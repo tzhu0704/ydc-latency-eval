@@ -141,10 +141,57 @@ class CollectorCliTests(unittest.TestCase):
             )
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(
-                json.loads(completed.stdout),
-                {"INTERNATIONAL_API_KEY": True, "YDC_API_KEY": True},
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {"INTERNATIONAL_API_KEY": True, "YDC_API_KEY": True},
+        )
+
+    def test_concurrent_matrix_generates_endpoint_reports_and_cache_headers(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_path = Path(temporary_directory)
+            fake_curl = temporary_path / "curl"
+            args_log = temporary_path / "curl-args.log"
+            fake_curl.write_text(
+                "#!/bin/sh\n"
+                f"printf '%s\\n' \"$*\" >> '{args_log}'\n"
+                "case \" $* \" in\n"
+                "  *' -o /dev/null '*) printf '200|0|203.0.113.1|0.012|0.045|0.410|0.650|0.651' ;;\n"
+                "  *) printf '{\"hits\":[{\"url\":\"https://example.com\"}]}'\n"
+                "     printf '\\n__YDC_STATUS__200' ;;\n"
+                "esac\n"
             )
+            fake_curl.chmod(0o755)
+            queries = temporary_path / "queries.json"
+            queries.write_text(json.dumps([{"id": "q1", "query": "test"}]))
+            queries2 = temporary_path / "queries-2.json"
+            queries2.write_text(json.dumps([{"id": "q2", "query": "different test"}]))
+            prefix = temporary_path / "reports" / "concurrent"
+            environment = os.environ.copy()
+            environment.update({"KEY_A": "key-a", "KEY_B": "key-b"})
+
+            completed = subprocess.run(
+                [
+                    sys.executable, str(PROJECT_ROOT / "run_concurrent_matrix.py"),
+                    "--queries", str(queries), str(queries2), "--report-prefix", str(prefix),
+                    "--endpoint", "a.example/search@KEY_A",
+                    "--endpoint", "b.example/search@KEY_B",
+                    "--rounds", "2", "--concurrency", "2", "--curl-bin", str(fake_curl),
+                ], capture_output=True, check=False, text=True, env=environment,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertTrue(prefix.with_suffix(".jsonl").exists())
+            self.assertTrue(prefix.with_suffix(".summary.json").exists())
+            self.assertTrue(prefix.with_suffix(".summary.tsv").exists())
+            summary = json.loads(prefix.with_suffix(".summary.json").read_text())
+            self.assertEqual([row["requests"] for row in summary["endpoints"]], [2, 2])
+            raw_records = [json.loads(line) for line in prefix.with_suffix(".jsonl").read_text().splitlines()]
+            self.assertEqual({record["query_set"] for record in raw_records}, {"queries", "queries-2"})
+            args = args_log.read_text()
+            self.assertIn("--no-keepalive", args)
+            self.assertIn("Cache-Control: no-cache, no-store", args)
+            self.assertIn("Pragma: no-cache", args)
+            self.assertIn("X-Client-Request-Id:", args)
 
 
 if __name__ == "__main__":
